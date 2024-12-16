@@ -1,27 +1,27 @@
 // ignore_for_file: use_build_context_synchronously
 
-import 'package:e_esap/componentes/meu_botao_entrar.dart';
+import 'package:e_esap/componentes/meu_botao_registar.dart';
 import 'package:e_esap/componentes/meu_text_field.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-class PaginaLogin extends StatefulWidget {
-  final VoidCallback mostrarPaginaDeRegisto;
-  const PaginaLogin({super.key, required this.mostrarPaginaDeRegisto});
+class PaginaRegisto extends StatefulWidget {
+  final VoidCallback mostrarPaginaDeLogin;
+  const PaginaRegisto({super.key, required this.mostrarPaginaDeLogin});
 
   @override
-  State<PaginaLogin> createState() => _PaginaLoginState();
+  State<PaginaRegisto> createState() => _PaginaRegistoState();
 }
 
-class _PaginaLoginState extends State<PaginaLogin> {
+class _PaginaRegistoState extends State<PaginaRegisto> {
 
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+  final confimarpasswordController = TextEditingController();
 
   bool ispasswordHidden = true;
 
-  void entrar() async {
-
+  void registar() async {
     showDialog(
       context: context, 
       builder: (context) {
@@ -31,46 +31,81 @@ class _PaginaLoginState extends State<PaginaLogin> {
       },
     );
 
-    try{
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-      email: emailController.text, 
-      password: passwordController.text,
-    );
-
-    Navigator.pop(context);
-    } on FirebaseAuthException catch (e) {
+    // Validar o e-mail
+    if (!validaremail(emailController.text)) {
       Navigator.pop(context);
-      //Email errado
-      if (e.code == 'invalid-email') {
-        //mostra o erro ao utilizador
-        emailErrado();
-      }
+      mostrarMensagemErroEmail();
+      return;
+    }
 
-      //Palavra-passe errada
-      if (e.code == 'invalid-credential') {
-        //mostra o erro ao utilizador
-        passwordErrada();
-      }
+    // Validar a confirmação da palavra-passe
+    if (!passwordConfirmada()) {
+      Navigator.pop(context); // Fechar o diálogo
+      mostrarMensagemErroPassword();
+      return;
+    }
+
+    // Tentar criar o utilizador no Firebase
+    try {
+      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: emailController.text,
+        password: passwordController.text,
+      );
+      Navigator.pop(context);
+      mostrarMensagemSucesso();
+    } catch (e) {
+      Navigator.pop(context);
+      mostrarMensagemErro();
     }
   }
 
-  void emailErrado() {
+  bool validaremail(String email) {
+    return email.endsWith('@esap.edu.pt');
+  }
+
+  bool passwordConfirmada() {
+    return passwordController.text == confimarpasswordController.text;
+  }
+
+  void mostrarMensagemSucesso() {
     showDialog(
       context: context, 
       builder: (context) {
         return const AlertDialog(
-          title: Text('Email incorreto!'),
+          title: Text('Utilizador registado com sucesso!'),
         );
       },
     );
   }
 
-  void passwordErrada() {
+  void mostrarMensagemErro() {
     showDialog(
       context: context, 
       builder: (context) {
         return const AlertDialog(
-          title: Text('Palavra-Passe incorreta!'),
+          title: Text('Erro ao registar o utilizador!'),
+        );
+      },
+    );
+  }
+
+  void mostrarMensagemErroEmail() {
+    showDialog(
+      context: context, 
+      builder: (context) {
+        return const AlertDialog(
+          title: Text('Email não termina com "@esap.edu.pt".'),
+        );
+      },
+    );
+  }
+
+  void mostrarMensagemErroPassword() {
+    showDialog(
+      context: context, 
+      builder: (context) {
+        return const AlertDialog(
+          title: Text('As Palavras-Passes não coincidem!'),
         );
       },
     );
@@ -94,7 +129,7 @@ class _PaginaLoginState extends State<PaginaLogin> {
                 
                 //texto a dizer "Bem-vindo(a)"
                 Text(
-                  "Bem-vindo(a)",
+                  "Para se registar preencha os campos abaixo!",
                   style: TextStyle(color: Colors.grey[700],
                   fontSize: 16,
                   ),
@@ -125,6 +160,27 @@ class _PaginaLoginState extends State<PaginaLogin> {
                       fillColor: Colors.grey.shade200,
                       filled: true,
                       hintText: 'Palavra-Passe',
+                    ),
+                  ),
+                ),
+
+                //confimar password
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 25.0),
+                  child: TextField(
+                    controller: confimarpasswordController,
+                    obscureText: ispasswordHidden,
+                    decoration: InputDecoration(
+                      enabledBorder: const OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.white),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey.shade400),
+                      ),
+                      fillColor: Colors.grey.shade200,
+                      filled: true,
+                      hintText: 'Confimar Palavra-Passe',
                       suffixIcon: IconButton(
                         onPressed: () {
                           setState(() {
@@ -140,25 +196,25 @@ class _PaginaLoginState extends State<PaginaLogin> {
                 const SizedBox(height: 25),
 
                 //Botão de Entrar
-                MeuBotaoEntrar(
-                  onTap: entrar,
+                MeuBotaoRegistar(
+                  onTap: registar,
                 ),
 
                 const SizedBox(height: 10),
 
-                //Não tem conta? Crie aqui
+                //Já tem conta? Crie aqui
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 25.0),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       Text(
-                        'Não tem conta?',
+                        'Já tem conta?',
                         style: TextStyle(color: Colors.grey[700]),
                       ),
                       const SizedBox(width: 4),
                       GestureDetector(
-                        onTap: widget.mostrarPaginaDeRegisto,
+                        onTap: widget.mostrarPaginaDeLogin,
                         child: const Text(
                           'Clique aqui',
                           style: TextStyle(
@@ -170,6 +226,7 @@ class _PaginaLoginState extends State<PaginaLogin> {
                     ],
                   ),
                 ),
+
               ],
             ),
           ),
